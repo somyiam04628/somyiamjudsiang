@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#8b1e1e"><title>แผนที่จุดเสี่ยงตำบลโสมเยี่ยม</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{font-family:system-ui,Tahoma,sans-serif;color:#17202a;background:#f5f6f8}*{box-sizing:border-box}
+body{margin:0}header{background:#8b1e1e;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;z-index:1000}
+h1{font-size:18px;margin:0}.sub{font-size:11px;opacity:.9}.app{display:grid;grid-template-columns:390px 1fr;height:calc(100vh - 64px)}
+aside{background:#fff;padding:12px;overflow:auto}.map{min-height:0}#map{height:100%;min-height:400px}
+.card{border:1px solid #ddd;border-radius:12px;padding:10px;margin-bottom:9px;background:#fff;box-shadow:0 1px 2px #00000008}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}.row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+button{border:0;border-radius:8px;padding:9px;font-weight:700;cursor:pointer}.primary{background:#8b1e1e;color:#fff}.blue{background:#2563eb;color:#fff}.gray{background:#edf0f4}.danger{background:#fee2e2;color:#991b1b}
+input,select,textarea{width:100%;padding:8px;border:1px solid #ccd1d8;border-radius:8px;margin:4px 0 7px;font:inherit}textarea{min-height:65px}label{font-size:12px;font-weight:700}
+.meta{font-size:11px;color:#667085}.hidden{display:none!important}.badge{font-size:10px;padding:3px 6px;border-radius:20px;background:#eee;display:inline-block;margin-top:4px}.high{background:#fee2e2;color:#991b1b}.mid{background:#fef3c7;color:#92400e}.low{background:#dcfce7;color:#166534}
+.item{border:1px solid #ddd;border-radius:9px;padding:8px;margin:6px 0}.title{font-weight:800}.actions{margin-top:5px;display:flex;gap:5px}.actions button{padding:6px 8px;font-size:12px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:3000;background:#17202a;color:#fff;padding:10px 14px;border-radius:10px;display:none;max-width:90%;font-size:13px}
+@media(max-width:800px){header{position:relative}.app{display:flex;flex-direction:column;height:auto}.map{order:1;height:48vh}.map #map{height:48vh}.side{order:2}aside{order:2}}
+</style></head>
+<body>
+<header><div><h1>📍 แผนที่จุดเสี่ยงอุบัติเหตุตำบลโสมเยี่ยม</h1><div class="sub"> ตำบลโสมเยี่ยม อำเภอน้ำโสม จังหวัดอุดรธานี</div></div><div style="font-size:12px">🌐 สร้างวินัยจราจรลดอุบัติเหตุบนท้องถนน</div></header>
+<div class="app"><aside>
+<div class="card"><b>สถานะฐานข้อมูลกลาง</b><div id="sync" class="meta">กำลังตรวจสอบ...</div><div id="diag" class="meta" style="white-space:pre-wrap;margin-top:5px"></div>
+<button id="retry" class="gray" style="width:100%;margin-top:6px">🔄 โหลดข้อมูลใหม่</button></div>
+<div class="card">
+<b>แสดงบนแผนที่</b>
+<div class="row" style="margin-top:7px">
+<label style="font-weight:400"><input id="showRisks" type="checkbox" checked style="width:auto;margin-right:5px"> ⚠️ จุดเสี่ยง</label>
+<label style="font-weight:400"><input id="showPlaces" type="checkbox" checked style="width:auto;margin-right:5px"> 🏛️ สถานที่สำคัญ</label>
+</div>
+</div>
+<div class="card">
+<label>ประเภทข้อมูลที่จะบันทึก</label>
+<select id="dataMode"><option value="risk">⚠️ จุดเสี่ยง</option><option value="place">🏛️ สถานที่สำคัญ</option></select>
+<label>ชื่อ *</label><input id="name" placeholder="ชื่อจุด/สถานที่">
+<div id="riskFields"><label>ประเภทจุดเสี่ยง</label><select id="riskType"><option>ทางแยก/สี่แยก</option><option>ทางโค้ง</option><option>ถนนชำรุด</option><option>ไฟส่องสว่างไม่เพียงพอ</option><option>ไม่มีป้าย/สัญญาณจราจร</option><option>จุดตัดทางข้าม/ทางรถไฟ</option><option>โรงเรียน/ตลาด/ชุมชนหนาแน่น</option><option>อื่น ๆ</option></select>
+<label>ระดับความเสี่ยง</label><select id="severity"><option>สูง</option><option selected>ปานกลาง</option><option>ต่ำ</option></select>
+<label>สถานะ</label><select id="riskStatus"><option>เปิดใช้งาน</option><option>กำลังแก้ไข</option><option>แก้ไขแล้ว</option><option>ยกเลิก</option></select></div>
+<div id="placeFields" class="hidden"><label>ประเภทสถานที่</label><select id="placeType"><option>โรงพยาบาล</option><option>รพ.สต.</option><option>โรงเรียน</option><option>วัด</option><option>หน่วยงานราชการ</option><option>สถานีตำรวจ</option><option>จุดดับเพลิง</option><option>ตลาด/ร้านค้า</option><option>จุดจอดรถ</option><option>อื่น ๆ</option></select><label>เบอร์โทร</label><input id="phone"></div>
+<label>ถนน</label><input id="road"><label>หมู่บ้าน</label><input id="village"><label>รายละเอียด</label><textarea id="desc"></textarea>
+<label>พิกัด (คลิกบนแผนที่)</label><div class="row"><input id="lat" readonly placeholder="ละติจูด"><input id="lng" readonly placeholder="ลองจิจูด"></div>
+<div class="row"><button id="save" class="primary">💾 บันทึก</button><button id="clear" class="gray">ล้างฟอร์ม</button></div>
+</div>
+<div class="card"><input id="search" placeholder="🔎 ค้นหาชื่อ / หมู่บ้าน / ประเภท"><div id="list"></div></div>
+</aside><div class="map"><div id="map"></div></div></div><div id="toast"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script>
+const cfg=window.SUPABASE_CONFIG||{};const db=supabase.createClient(cfg.url,cfg.anonKey);
+const $=id=>document.getElementById(id);let mode="risk",editId=null,risks=[],places=[];
+const map=L.map("map").setView([17.4138,102.7875],13);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(map);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+const toast=m=>{ $("toast").textContent=m;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",2800)};
+function pin(color){return L.divIcon({className:"",html:`<div style="width:26px;height:26px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 5px #0005"></div>`,iconSize:[26,26],iconAnchor:[13,13]})}
+function render(){
+ map.eachLayer(l=>{if(l instanceof L.Marker)map.removeLayer(l)});
+ const q=$("search").value.toLowerCase().trim();
+ const showR=$("showRisks").checked, showP=$("showPlaces").checked;
+ if(showR){
+  risks.forEach(x=>L.marker([x.latitude,x.longitude],{icon:pin(x.severity==="สูง"?"#dc2626":x.severity==="ต่ำ"?"#16a34a":"#f59e0b")}).addTo(map)
+   .bindPopup(`<b>⚠️ ${esc(x.name)}</b><br>${esc(x.risk_type)}<br>ระดับ ${esc(x.severity)}<br>${esc(x.risk_status)}<br>${esc(x.village||"")}`));
+ }
+ if(showP){
+  places.forEach(x=>L.marker([x.latitude,x.longitude],{icon:pin("#2563eb")}).addTo(map)
+   .bindPopup(`<b>🏛️ ${esc(x.name)}</b><br>${esc(x.place_type)}${x.phone?"<br>☎ "+esc(x.phone):""}<br>${esc(x.village||"")}`));
+ }
+ const rr=risks.filter(x=>[x.name,x.risk_type,x.village,x.road,x.description].join(" ").toLowerCase().includes(q));
+ const pp=places.filter(x=>[x.name,x.place_type,x.village,x.road,x.description].join(" ").toLowerCase().includes(q));
+ let out="";
+ if(showR) out += `<div class="meta"><b>⚠️ จุดเสี่ยง ${rr.length}</b></div>` +
+  rr.map(x=>`<div class="item"><div class="title">⚠️ ${esc(x.name)}</div><div class="meta">${esc(x.risk_type)} • ${esc(x.village||"")}</div><span class="badge ${x.severity==="สูง"?"high":x.severity==="ต่ำ"?"low":"mid"}">${esc(x.severity)}</span><div class="actions"><button class="gray" onclick="editRisk('${x.id}')">แก้ไข</button><button class="danger" onclick="delRisk('${x.id}')">ลบ</button></div></div>`).join("");
+ if(showP) out += `<div class="meta" style="margin-top:10px"><b>🏛️ สถานที่สำคัญ ${pp.length}</b></div>` +
+  pp.map(x=>`<div class="item"><div class="title">🏛️ ${esc(x.name)}</div><div class="meta">${esc(x.place_type)} • ${esc(x.village||"")}</div>${x.phone?`<div class="meta">☎ ${esc(x.phone)}</div>`:""}<div class="actions"><button class="gray" onclick="editPlace('${x.id}')">แก้ไข</button><button class="danger" onclick="delPlace('${x.id}')">ลบ</button></div></div>`).join("");
+ $("list").innerHTML=out||"<div class='meta'>ไม่พบข้อมูล</div>";
+}
+async function load(){
+ $("sync").textContent="🟡 กำลังเชื่อมต่อ...";
+ $("diag").textContent="";
+ if(!cfg.url||!cfg.anonKey||cfg.url.includes("YOUR_")||cfg.anonKey.includes("YOUR_")){$("sync").textContent="🔴 ยังไม่ได้ตั้งค่า Supabase";return}
+ try{
+  const [r,p]=await Promise.all([db.from("risks").select("*").order("updated_at",{ascending:false}),db.from("places").select("*").order("updated_at",{ascending:false})]);
+  const e=[];if(r.error)e.push("risks: "+r.error.message);if(p.error)e.push("places: "+p.error.message);
+  if(e.length){risks=[];places=[];$("sync").textContent="🔴 ฐานข้อมูลตอบกลับ Error";$("diag").textContent=e.join("\\n");render();return}
+  risks=r.data||[];places=p.data||[];$("sync").textContent="🟢 เชื่อมต่อสำเร็จ";$("diag").textContent=`⚠️ จุดเสี่ยง ${risks.length} จุด\\n🏛️ สถานที่สำคัญ ${places.length} แห่ง`;render();
+ }catch(e){$("sync").textContent="🔴 เชื่อมต่อไม่ได้";$("diag").textContent=e.message||String(e);render()}
+}
+function clearForm(){editId=null;["name","road","village","desc","lat","lng","phone"].forEach(id=>$(id).value="")}
+$("dataMode").onchange=()=>{mode=$("dataMode").value;$("riskFields").classList.toggle("hidden",mode!=="risk");$("placeFields").classList.toggle("hidden",mode!=="place");render()}
+$("showRisks").onchange=render;$("showPlaces").onchange=render;
+$("retry").onclick=load;$("search").oninput=render;$("clear").onclick=clearForm;
+map.on("click",e=>{$("lat").value=e.latlng.lat.toFixed(6);$("lng").value=e.latlng.lng.toFixed(6);toast("เลือกพิกัดแล้ว")});
+$("save").onclick=async()=>{
+ const d={name:$("name").value.trim(),road:$("road").value,village:$("village").value,description:$("desc").value,latitude:Number($("lat").value),longitude:Number($("lng").value),updated_by:null};
+ if(!d.name||!Number.isFinite(d.latitude)||!Number.isFinite(d.longitude))return alert("กรุณากรอกชื่อ และคลิกบนแผนที่เพื่อเลือกพิกัด");
+ let r;
+ if(mode==="risk"){Object.assign(d,{risk_type:$("riskType").value,severity:$("severity").value,risk_status:$("riskStatus").value});r=editId?await db.from("risks").update(d).eq("id",editId):await db.from("risks").insert(d)}
+ else{Object.assign(d,{place_type:$("placeType").value,phone:$("phone").value});r=editId?await db.from("places").update(d).eq("id",editId):await db.from("places").insert(d)}
+ if(r.error)alert("บันทึกไม่สำเร็จ: "+r.error.message);else{toast("บันทึกข้อมูลกลางสำเร็จ");clearForm();load()}
+};
+window.editRisk=id=>{const x=risks.find(a=>a.id===id);if(!x)return;mode="risk";$("dataMode").value="risk";$("riskFields").classList.remove("hidden");$("placeFields").classList.add("hidden");editId=id;$("name").value=x.name;$("riskType").value=x.risk_type;$("severity").value=x.severity;$("riskStatus").value=x.risk_status;$("road").value=x.road||"";$("village").value=x.village||"";$("desc").value=x.description||"";$("lat").value=x.latitude;$("lng").value=x.longitude;map.setView([x.latitude,x.longitude],17)};
+window.editPlace=id=>{const x=places.find(a=>a.id===id);if(!x)return;mode="place";$("dataMode").value="place";$("riskFields").classList.add("hidden");$("placeFields").classList.remove("hidden");editId=id;$("name").value=x.name;$("placeType").value=x.place_type;$("phone").value=x.phone||"";$("road").value=x.road||"";$("village").value=x.village||"";$("desc").value=x.description||"";$("lat").value=x.latitude;$("lng").value=x.longitude;map.setView([x.latitude,x.longitude],17)};
+window.delRisk=async id=>{if(confirm("ยืนยันลบจุดเสี่ยงนี้?")){const r=await db.from("risks").delete().eq("id",id);if(r.error)alert(r.error.message);else{toast("ลบแล้ว");load()}}};
+window.delPlace=async id=>{if(confirm("ยืนยันลบสถานที่นี้?")){const r=await db.from("places").delete().eq("id",id);if(r.error)alert(r.error.message);else{toast("ลบแล้ว");load()}}};
+load();
+</script></body></html>
